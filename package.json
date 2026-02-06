@@ -2,7 +2,7 @@
   "name": "turbopick",
   "displayName": "TurboPick",
   "description": "Fuzzy search for vscode.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.109.0"
   },
