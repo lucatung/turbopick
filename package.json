@@ -14,10 +14,36 @@
   "contributes": {
     "commands": [
       {
-        "command": "turbopick.helloWorld",
-        "title": "Hello World"
+        "command": "turbopick.searchFiles",
+        "title": "TurboPick: Search Files"
+      },
+      {
+        "command": "turbopick.searchDocumentSymbols",
+        "title": "TurboPick: Search Document Symbols"
+      },
+      {
+        "command": "turbopick.searchWorkspaceSymbols",
+        "title": "TurboPick: Search Workspace Symbols"
+      },
+      {
+        "command": "turbopick.searchLines",
+        "title": "TurboPick: Search Lines"
+      },
+      {
+        "command": "turbopick.searchWorkspaceLines",
+        "title": "TurboPick: Search Workspace Lines"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "TurboPick",
+      "properties": {
+        "turbopick.preview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable preview when searching document symbols."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
