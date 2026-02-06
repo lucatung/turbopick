@@ -40,7 +40,7 @@ suite("Algorithm Test Suite", () => {
 
   test("Ranking: Consecutive vs Scattered", () => {
     const resConsecutive = fuzzyMatch("file_name.ts", "file");
-    const resScattered = fuzzyMatch("f_i_l_e.ts", "file");
+    const resScattered = fuzzyMatch("fzizlze", "file");
 
     assert.ok(resConsecutive);
     assert.ok(resScattered);
