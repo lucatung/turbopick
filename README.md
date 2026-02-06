@@ -31,9 +31,3 @@ You can tweak the experience in your VS Code settings:
 ## Related Work
 
 This extension is heavily inspired by [fzf](https://github.com/junegunn/fzf).
-
-## Release Notes
-
-### 0.1.0
-
-Initial release.
