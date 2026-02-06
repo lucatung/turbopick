@@ -1,71 +1,39 @@
-# turbopick README
+# TurboPick
 
-This is the README for your extension "turbopick". After writing up a brief description, we recommend including the following sections.
+TurboPick is a fuzzy picker for VS Code designed to feel intuitive and fast.
 
-## Features
+Built entirely in TypeScript, TurboPick works seamlessly across all platforms without native dependencies.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+## Why TurboPick?
 
-For example if there is an image subfolder under your extension project workspace:
+Essential features:
 
-\!\[feature X\]\(images/feature-x.png\)
+- **Natural Fuzzy Matching**: Fzf-like fuzzy matching, which is more intuitive.
+- **Blazing Speed**: Results stream in incrementally, keeping the UI responsive.
+- **Cross-Platform**: Works out of the box on Windows, macOS, and Linux without any additional setup.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## Getting Started
 
-## Requirements
+Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and type `turbopick` to see available commands:
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- **Search Files**: Search files in your workspace.
+- **Search Document Symbols**: Search symbols in the current document.
+- **Search Workspace Symbols**: Search symbols across the entire workspace.
+- **Search Lines**: Search lines in the current document.
+- **Search Workspace Lines**: Search lines across the entire workspace.
 
-## Extension Settings
+## Configuration
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+You can tweak the experience in your VS Code settings:
 
-For example:
+- `turbopick.preview`: Toggles the code preview panel when searching document symbols (default: `true`).
 
-This extension contributes the following settings:
+## Related Work
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
+This extension is heavily inspired by [fzf](https://github.com/junegunn/fzf).
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.1.0
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Initial release.
