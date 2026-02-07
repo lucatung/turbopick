@@ -2,7 +2,13 @@
   "name": "turbopick",
   "displayName": "TurboPick",
   "description": "Fuzzy search for vscode.",
+  "publisher": "lucatung",
   "version": "0.1.0",
+  "homepage": "https://github.com/lucatung/turbopick",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lucatung/turbopick.git"
+  },
   "engines": {
     "vscode": "^1.109.0"
   },
