@@ -16,6 +16,8 @@ export class FuzzyPicker {
   private currentQuery: string = "";
   private pendingSearch: NodeJS.Timeout | null = null;
   private wasAccepted: boolean = false;
+  private isDisposed: boolean = false;
+  private searchToken: number = 0;
 
   constructor(placeholder: string) {
     this.quickPick = vscode.window.createQuickPick<TurboPickItem>();
@@ -44,7 +46,7 @@ export class FuzzyPicker {
       if (selected) {
         this.handleSelection(selected);
       }
-      this.dispose();
+      this.quickPick.hide();
     });
   }
 
@@ -64,29 +66,48 @@ export class FuzzyPicker {
   }
 
   private dispose() {
+    if (this.isDisposed) {
+      return;
+    }
+    this.isDisposed = true;
+    this.searchToken++;
+    if (this.pendingSearch) {
+      clearTimeout(this.pendingSearch);
+      this.pendingSearch = null;
+    }
     this.quickPick.dispose();
   }
 
   // Callbacks to be set by caller
-  public onAccept: (item: TurboPickItem) => void = () => {};
-  public onActive: (item: TurboPickItem) => void = () => {};
-  public onCancel: () => void = () => {};
+  public onAccept: (item: TurboPickItem) => void = () => { };
+  public onActive: (item: TurboPickItem) => void = () => { };
+  public onCancel: () => void = () => { };
 
   private handleSelection(item: TurboPickItem) {
     this.onAccept(item);
   }
 
   private triggerSearch() {
+    if (this.isDisposed) {
+      return;
+    }
+
     if (this.pendingSearch) {
       clearTimeout(this.pendingSearch);
     }
 
     this.pendingSearch = setTimeout(() => {
-      this.performSearch(this.currentQuery);
+      this.pendingSearch = null;
+      void this.performSearch(this.currentQuery);
     }, 200);
   }
 
   private async performSearch(query: string) {
+    if (this.isDisposed) {
+      return;
+    }
+
+    const token = ++this.searchToken;
     this.quickPick.busy = true;
 
     // Show all or top 100 for empty query
@@ -99,16 +120,13 @@ export class FuzzyPicker {
     const matchedItems: (TurboPickItem & { score: number })[] = [];
 
     let processedCount = 0;
-    const startTime = Date.now();
-    let lastUpdateTime = startTime;
+    let lastUpdateTime = Date.now();
 
     // Use a local ref to items to avoid issues if allItems changes
     const items = this.allItems;
 
-    const searchEpoch = query;
-
     const processChunk = async () => {
-      if (this.currentQuery !== searchEpoch) {
+      if (this.isDisposed || token !== this.searchToken) {
         return; // Cancelled by new query
       }
 
@@ -138,7 +156,7 @@ export class FuzzyPicker {
             await new Promise((resolve) => setTimeout(resolve, 0));
 
             // Resume check
-            if (this.currentQuery !== searchEpoch) {
+            if (this.isDisposed || token !== this.searchToken) {
               return;
             }
 
@@ -148,7 +166,7 @@ export class FuzzyPicker {
         }
       }
 
-      if (this.currentQuery === searchEpoch) {
+      if (!this.isDisposed && token === this.searchToken) {
         this.updateResults(matchedItems);
         this.quickPick.busy = false;
       }
@@ -206,7 +224,7 @@ export async function pickDocumentSymbol() {
         if (
           vscode.window.activeTextEditor &&
           vscode.window.activeTextEditor.document.uri.toString() ===
-            item.data.uri.toString()
+          item.data.uri.toString()
         ) {
           const e = vscode.window.activeTextEditor;
           e.revealRange(item.data.range, vscode.TextEditorRevealType.InCenter);
@@ -358,7 +376,7 @@ export async function pickWorkspaceLines() {
   picker.setPending();
   picker.show();
 
-  vscode.window.withProgress(
+  await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: "Indexing workspace...",
@@ -371,23 +389,22 @@ export async function pickWorkspaceLines() {
       );
 
       // TODO: Limit file count to avoid OOM?
-      const targetUris = uris;
 
       const items: TurboPickItem[] = [];
       const decoder = new TextDecoder("utf-8");
 
-      const total = targetUris.length;
+      const total = uris.length;
       let processed = 0;
 
       // Concurrency limit
       const limit = 10;
 
-      for (let i = 0; i < targetUris.length; i += limit) {
+      for (let i = 0; i < uris.length; i += limit) {
         if (token.isCancellationRequested) {
           break;
         }
 
-        const chunk = targetUris.slice(i, i + limit);
+        const chunk = uris.slice(i, i + limit);
         await Promise.all(
           chunk.map(async (uri) => {
             try {
