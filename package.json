@@ -3,7 +3,7 @@
   "displayName": "TurboPick",
   "description": "Fuzzy search for vscode.",
   "publisher": "lucatung",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "https://github.com/lucatung/turbopick",
   "repository": {
     "type": "git",
