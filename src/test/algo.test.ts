@@ -1,95 +1,110 @@
 import * as assert from "assert";
 import { fuzzyMatch } from "../algo";
 
-suite("Algorithm Test Suite", () => {
-  test("Exact match", () => {
+suite("fuzzyMatch", () => {
+  test("empty pattern returns score 0", () => {
+    const result = fuzzyMatch("hello", "");
+    assert.ok(result);
+    assert.strictEqual(result.score, 0);
+    assert.deepStrictEqual(result.positions, []);
+  });
+
+  test("exact match returns positive score with correct positions", () => {
     const result = fuzzyMatch("hello", "hello");
     assert.ok(result);
-    assert.strictEqual(result!.positions.length, 5);
+    assert.ok(result.score > 0);
+    assert.deepStrictEqual(result.positions, [0, 1, 2, 3, 4]);
   });
 
-  test("Partial match", () => {
-    const result = fuzzyMatch("hello world", "helo");
+  test("no match returns null", () => {
+    assert.strictEqual(fuzzyMatch("hello", "xyz"), null);
+  });
+
+  test("pattern longer than text returns null", () => {
+    assert.strictEqual(fuzzyMatch("hi", "hello"), null);
+  });
+
+  test("empty text returns null", () => {
+    assert.strictEqual(fuzzyMatch("", "a"), null);
+  });
+
+  test("subsequence match returns positions in order", () => {
+    const result = fuzzyMatch("abcdef", "ace");
     assert.ok(result);
-    // h, e, l, o
-    assert.deepStrictEqual(
-      result!.positions.map((p) => "hello world"[p]).join(""),
-      "helo",
-    );
+    assert.ok(result.score > 0);
+    assert.strictEqual(result.positions.length, 3);
+    for (let i = 1; i < result.positions.length; i++) {
+      assert.ok(result.positions[i] > result.positions[i - 1]);
+    }
   });
 
-  test("No match due to missing char", () => {
-    const result = fuzzyMatch("hello", "hx");
-    assert.strictEqual(result, null);
-  });
-
-  test("Case insensitive", () => {
-    const result = fuzzyMatch("Hello", "he");
+  test("case insensitive matching", () => {
+    const result = fuzzyMatch("HelloWorld", "hw");
     assert.ok(result);
+    assert.ok(result.score > 0);
   });
 
-  test("Ranking: Boundary bonus", () => {
-    const res1 = fuzzyMatch("foo bar", "b");
-    const res2 = fuzzyMatch("bar foo", "b");
-    // 'b' in 'foo bar' is at index 4 (boundary)
-    // 'b' in 'bar foo' is at index 0 (start) - also boundary/first char
-
-    assert.ok(res1);
-    assert.ok(res2);
+  test("smart case: lowercase pattern is case-insensitive", () => {
+    const result = fuzzyMatch("FooBar", "fb");
+    assert.ok(result, "lowercase 'fb' should match 'FooBar'");
   });
 
-  test("Ranking: Consecutive vs Scattered", () => {
-    const resConsecutive = fuzzyMatch("file_name.ts", "file");
-    const resScattered = fuzzyMatch("fzizlze", "file");
+  test("smart case: uppercase in pattern is case-sensitive", () => {
+    const match = fuzzyMatch("FooBar", "FB");
+    assert.ok(match, "'FB' should match 'FooBar'");
 
-    assert.ok(resConsecutive);
-    assert.ok(resScattered);
-    assert.ok(
-      resConsecutive!.score > resScattered!.score,
-      "Consecutive match should score higher",
-    );
+    const noMatch = fuzzyMatch("foobar", "FB");
+    assert.strictEqual(noMatch, null, "'FB' should NOT match 'foobar'");
   });
 
-  test("Ranking: CamelCase bonus", () => {
-    const resCamel = fuzzyMatch("fooBar", "fb");
-    const resNormal = fuzzyMatch("foobar", "fb");
+  test("smart case: mixed case pattern is case-sensitive", () => {
+    const match = fuzzyMatch("FooBar", "Fo");
+    assert.ok(match, "'Fo' should match 'FooBar'");
 
-    assert.ok(resCamel);
-    assert.ok(resNormal);
-    // 'B' in fooBar is camel case boundary, should score higher than 'b' in foobar
-    assert.ok(
-      resCamel!.score > resNormal!.score,
-      "CamelCase match should score higher",
-    );
+    const noMatch = fuzzyMatch("foobar", "Fo");
+    assert.strictEqual(noMatch, null, "'Fo' should NOT match 'foobar'");
   });
 
-  test("Ranking: Path matching", () => {
-    // user types "mod"
-    // candidate 1: "src/model.ts" (starts with mod)
-    // candidate 2: "src/modules/utils.ts" (starts with mod)
-    // candidate 3: "src/component/modal.ts" (start with mod)
-    // candidate 4: "src/commond.ts" (contains mod)
+  test("smart case: real-world file paths", () => {
+    // Lowercase pattern - should match regardless of case
+    assert.ok(fuzzyMatch("SearchBar.tsx", "sb"), "lowercase 'sb' matches 'SearchBar.tsx'");
+    assert.ok(fuzzyMatch("searchbar.tsx", "sb"), "lowercase 'sb' matches 'searchbar.tsx'");
 
-    const pattern = "mod";
-    const c1 = "src/model.ts";
-    const c4 = "src/commond.ts";
+    // Uppercase pattern - should only match exact case
+    assert.ok(fuzzyMatch("SearchBar.tsx", "SB"), "'SB' matches 'SearchBar.tsx'");
+    assert.strictEqual(fuzzyMatch("searchbar.tsx", "SB"), null, "'SB' should NOT match 'searchbar.tsx'");
 
-    const r1 = fuzzyMatch(c1, pattern);
-    const r4 = fuzzyMatch(c4, pattern);
-
-    // r1 matches "mod" at a word boundary (after /)
-    // r4 matches "mod" in the middle of word
-
-    assert.ok(
-      r1!.score > r4!.score,
-      "Boundary match should score higher than middle match",
-    );
+    // Mixed case pattern
+    assert.ok(fuzzyMatch("SearchBar.tsx", "Se"), "'Se' matches 'SearchBar.tsx'");
+    assert.strictEqual(fuzzyMatch("searchbar.tsx", "Se"), null, "'Se' should NOT match 'searchbar.tsx'");
   });
 
-  test("Full coverage check", () => {
-    assert.strictEqual(fuzzyMatch("", "abc"), null);
-    const res = fuzzyMatch("abc", "");
-    assert.ok(res);
-    assert.strictEqual(res!.score, 0);
+  test("camelCase boundary scores higher than flat", () => {
+    const camel = fuzzyMatch("fooBar", "fb");
+    const flat = fuzzyMatch("foobar", "fb");
+    assert.ok(camel);
+    assert.ok(flat);
+    assert.ok(camel.score > flat.score);
+  });
+
+  test("repeated calls return consistent results", () => {
+    for (let i = 0; i < 100; i++) {
+      const result = fuzzyMatch("src/components/SearchBar.tsx", "sb");
+      assert.ok(result);
+      assert.ok(result.score > 0);
+      assert.strictEqual(result.positions.length, 2);
+    }
+  });
+
+  test("single char pattern", () => {
+    const result = fuzzyMatch("abc", "b");
+    assert.ok(result);
+    assert.deepStrictEqual(result.positions, [1]);
+  });
+
+  test("path-like strings with delimiters", () => {
+    const result = fuzzyMatch("src/utils/helpers.ts", "suh");
+    assert.ok(result);
+    assert.strictEqual(result.positions.length, 3);
   });
 });

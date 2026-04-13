@@ -5,25 +5,24 @@ export interface TurboPickItem extends vscode.QuickPickItem {
   data?: any;
 }
 
-// Configuration for batch processing
-const BATCH_SIZE = 1000;
-const YIELD_THRESHOLD_MS = 15;
-const UPDATE_INTERVAL_MS = 100;
+const YIELD_EVERY = 2048;
 
 export class FuzzyPicker {
   private quickPick: vscode.QuickPick<TurboPickItem>;
   private allItems: TurboPickItem[] = [];
   private currentQuery: string = "";
-  private pendingSearch: NodeJS.Timeout | null = null;
   private wasAccepted: boolean = false;
   private isDisposed: boolean = false;
   private searchToken: number = 0;
+  private searchRunning: boolean = false;
+  private searchPending: boolean = false;
 
   constructor(placeholder: string) {
     this.quickPick = vscode.window.createQuickPick<TurboPickItem>();
     this.quickPick.placeholder = placeholder;
     this.quickPick.matchOnDescription = false;
     this.quickPick.matchOnDetail = false;
+
 
     this.quickPick.onDidHide(() => {
       if (!this.wasAccepted) {
@@ -71,10 +70,6 @@ export class FuzzyPicker {
     }
     this.isDisposed = true;
     this.searchToken++;
-    if (this.pendingSearch) {
-      clearTimeout(this.pendingSearch);
-      this.pendingSearch = null;
-    }
     this.quickPick.dispose();
   }
 
@@ -92,94 +87,71 @@ export class FuzzyPicker {
       return;
     }
 
-    if (this.pendingSearch) {
-      clearTimeout(this.pendingSearch);
+    this.searchToken++;
+
+    if (this.searchRunning) {
+      this.searchPending = true;
+      return;
     }
 
-    this.pendingSearch = setTimeout(() => {
-      this.pendingSearch = null;
-      void this.performSearch(this.currentQuery);
-    }, 200);
+    void this.performSearch(this.currentQuery, this.searchToken);
   }
 
-  private async performSearch(query: string) {
+  private async performSearch(query: string, token: number) {
     if (this.isDisposed) {
       return;
     }
 
-    const token = ++this.searchToken;
-    this.quickPick.busy = true;
-
-    // Show all or top 100 for empty query
-    if (!query) {
-      this.quickPick.items = this.allItems.slice(0, 100);
-      this.quickPick.busy = false;
+    if (token !== this.searchToken) {
       return;
     }
 
-    const matchedItems: (TurboPickItem & { score: number })[] = [];
+    this.searchRunning = true;
+    this.quickPick.busy = true;
 
-    let processedCount = 0;
-    let lastUpdateTime = Date.now();
+    try {
 
-    // Use a local ref to items to avoid issues if allItems changes
-    const items = this.allItems;
-
-    const processChunk = async () => {
-      if (this.isDisposed || token !== this.searchToken) {
-        return; // Cancelled by new query
+      // Show all or top 100 for empty query
+      if (!query) {
+        this.quickPick.items = this.allItems.slice(0, 100);
+        this.quickPick.busy = false;
+        return;
       }
 
-      let chunkStart = Date.now();
+      const items = this.allItems;
+      const matchedItems: (TurboPickItem & { score: number })[] = [];
 
-      while (processedCount < items.length) {
-        // Process one item
-        const item = items[processedCount];
-        const label = item.label;
-        const result = fuzzyMatch(label, query);
-
-        if (result) {
-          matchedItems.push({ ...item, score: result.score, alwaysShow: true });
+      for (let i = 0; i < items.length; i++) {
+        // Yield periodically so a new keystroke can cancel this search
+        if (i % YIELD_EVERY === 0 && i > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          if (this.isDisposed || token !== this.searchToken) {
+            return;
+          }
         }
 
-        processedCount++;
-
-        if (processedCount % BATCH_SIZE === 0) {
-          const now = Date.now();
-          if (now - chunkStart > YIELD_THRESHOLD_MS) {
-            if (now - lastUpdateTime > UPDATE_INTERVAL_MS) {
-              this.updateResults(matchedItems);
-              lastUpdateTime = now;
-            }
-
-            // Yield to event loop
-            await new Promise((resolve) => setTimeout(resolve, 0));
-
-            // Resume check
-            if (this.isDisposed || token !== this.searchToken) {
-              return;
-            }
-
-            // Reset chunk timer
-            chunkStart = Date.now();
-          }
+        const result = fuzzyMatch(items[i].label, query);
+        if (result) {
+          matchedItems.push({ ...items[i], score: result.score, alwaysShow: true });
         }
       }
 
       if (!this.isDisposed && token === this.searchToken) {
-        this.updateResults(matchedItems);
+        matchedItems.sort((a, b) => b.score - a.score);
+        this.quickPick.items = matchedItems;
         this.quickPick.busy = false;
       }
-    };
 
-    await processChunk();
+    } finally {
+      this.searchRunning = false;
+      if (this.searchPending) {
+        this.searchPending = false;
+        this.triggerSearch();
+      }
+    }
   }
 
-  private updateResults(matches: (TurboPickItem & { score: number })[]) {
-    // Sort by score descending
-    matches.sort((a, b) => b.score - a.score);
-    this.quickPick.items = matches;
-  }
+
 }
 
 export async function pickFile() {
