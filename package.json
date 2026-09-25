@@ -10,7 +10,7 @@
     "url": "https://github.com/lucatung/turbopick.git"
   },
   "engines": {
-    "vscode": "^1.109.0"
+    "vscode": "^1.139.0"
   },
   "categories": [
     "Other"
@@ -54,8 +54,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
-    "build:wasm": "zig build-exe src/zig/algo.zig -target wasm32-freestanding -O ReleaseSmall -fno-entry -rdynamic -femit-bin=dist/algo.wasm",
-    "test:zig": "zig test src/zig/algo.zig -O Debug",
+    "build:wasm": "node scripts/build-wasm.ts",
+    "test:algo": "cargo test --manifest-path src/rust/Cargo.toml",
     "compile": "npm run build:wasm && npm run check-types && npm run lint && node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
@@ -63,21 +63,23 @@
     "package": "npm run build:wasm && npm run check-types && npm run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run test:zig",
+    "pretest": "npm run compile-tests && npm run compile && npm run test:algo",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "vsce": "vsce"
   },
   "devDependencies": {
-    "@types/vscode": "^1.109.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "typescript-eslint": "^8.54.0",
-    "eslint": "^9.39.2",
-    "esbuild": "^0.27.2",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@types/node": "24.x",
+    "@types/vscode": "^1.138.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "npm-run-all2": "^9.0.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1"
   }
 }
